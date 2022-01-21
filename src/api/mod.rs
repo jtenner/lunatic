@@ -7,6 +7,7 @@ pub(crate) mod plugin;
 mod process;
 mod version;
 mod wasi;
+mod wgpu;
 
 use std::future::Future;
 
@@ -27,6 +28,7 @@ pub(crate) fn register(
     networking::register(linker, namespace_filter)?;
     wasi::register(linker, namespace_filter)?;
     version::register(linker, namespace_filter)?;
+    wgpu::register(linker, namespace_filter)?;
     Ok(())
 }
 
