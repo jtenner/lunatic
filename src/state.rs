@@ -4,6 +4,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use dashmap::DashMap;
 use hash_map_id::HashMapId;
+use lunatic_buffer_api::{Buffer, BufferCtx, BufferResource};
 use lunatic_distributed::{DistributedCtx, DistributedProcessState};
 use lunatic_error_api::{ErrorCtx, ErrorResource};
 use lunatic_networking_api::{DnsIterator, TlsConnection, TlsListener};
@@ -165,6 +166,7 @@ impl ProcessState for DefaultProcessState {
     }
 
     fn register(linker: &mut Linker<Self>) -> Result<()> {
+        lunatic_buffer_api::register(linker)?;
         lunatic_error_api::register(linker)?;
         lunatic_process_api::register(linker)?;
         lunatic_messaging_api::register(linker)?;
@@ -384,6 +386,16 @@ impl LunaticWasiCtx for DefaultProcessState {
     }
 }
 
+impl BufferCtx for DefaultProcessState {
+    fn buffer_resources(&self) -> &BufferResource {
+        &self.resources.buffers
+    }
+
+    fn buffer_resources_mut(&mut self) -> &mut BufferResource {
+        &mut self.resources.buffers
+    }
+}
+
 #[derive(Default, Debug)]
 pub(crate) struct Resources {
     pub(crate) configs: HashMapId<DefaultProcessConfig>,
@@ -396,6 +408,7 @@ pub(crate) struct Resources {
     pub(crate) tls_streams: HashMapId<Arc<TlsConnection>>,
     pub(crate) udp_sockets: HashMapId<Arc<UdpSocket>>,
     pub(crate) errors: HashMapId<anyhow::Error>,
+    pub(crate) buffers: HashMapId<std::sync::Arc<Buffer>>,
 }
 
 impl DistributedCtx<LunaticEnvironment> for DefaultProcessState {

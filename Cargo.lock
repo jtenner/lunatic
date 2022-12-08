@@ -1016,9 +1016,9 @@ dependencies = [
 
 [[package]]
 name = "ipnet"
-version = "2.5.1"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f88c5561171189e69df9d98bcf18fd5f9558300f7ea7b801eb8a0fd748bd8745"
+checksum = "ec947b7a4ce12e3b87e353abae7ce124d025b6c7d6c5aea5cc0bcf92e9510ded"
 
 [[package]]
 name = "is-terminal"
@@ -1144,6 +1144,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "lunatic-buffer-api"
+version = "0.12.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "hash-map-id",
+ "lunatic-common-api",
+ "lunatic-process",
+ "tokio",
+ "wasmtime",
 ]
 
 [[package]]
@@ -1287,12 +1300,14 @@ name = "lunatic-runtime"
 version = "0.12.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "clap 4.0.29",
  "criterion",
  "dashmap",
  "env_logger",
  "hash-map-id",
  "log",
+ "lunatic-buffer-api",
  "lunatic-distributed",
  "lunatic-distributed-api",
  "lunatic-error-api",
