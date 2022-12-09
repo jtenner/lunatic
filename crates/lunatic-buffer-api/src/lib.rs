@@ -3,7 +3,7 @@ use std::{
     convert::TryInto,
     future::Future,
     io::{Read, Write},
-    sync::Arc,
+    sync::{ Arc, Mutex },
 };
 
 use anyhow::{anyhow, Result};
@@ -21,7 +21,7 @@ pub struct Buffer {
     pub read_ptr: usize,
 }
 
-pub type BufferResource = HashMapId<Box<Buffer>>;
+pub type BufferResource = HashMapId<Arc<Mutex<Buffer>>>;
 
 pub trait BufferCtx {
     fn buffer_resources(&self) -> &BufferResource;
@@ -29,8 +29,8 @@ pub trait BufferCtx {
 }
 
 impl Buffer {
-    fn advance(mut self, bytes: usize) {
-        self.read_ptr += bytes;
+    fn seek(&mut self, index: usize) {
+        self.read_ptr = (self.bytes.len() - 1).min(index);
     }
 }
 
@@ -40,6 +40,7 @@ pub fn register<T: ProcessState + BufferCtx + Send + 'static>(
 ) -> Result<()> {
     linker.func_wrap("lunatic::buffer", "create", create)?;
     linker.func_wrap("lunatic::buffer", "read_data", read_data)?;
+    linker.func_wrap("lunatic::buffer", "seek_data", seek_data)?;
     Ok(())
 }
 
@@ -47,7 +48,7 @@ fn create<T: BufferCtx>(mut caller: Caller<T>, capacity: u32) -> Result<u64> {
     let buffer = Buffer::default();
 
     let data = caller.data_mut().buffer_resources_mut();
-    Ok(data.add(Box::new(buffer)))
+    Ok(data.add(Arc::new(buffer)))
 }
 
 fn read_data<T: BufferCtx>(mut caller: Caller<T>, id: u64, ptr: u32, size: u32) -> Result<u32> {
@@ -56,11 +57,14 @@ fn read_data<T: BufferCtx>(mut caller: Caller<T>, id: u64, ptr: u32, size: u32) 
         .data_mut()
         .buffer_resources_mut()
         .get_mut(id)
-        .or_trap("lunatic::buffer::read::get_buffer")?;
+        .or_trap("lunatic::buffer::read::get_buffer")?
+        .clone();
 
     let read_ptr = buffer.read_ptr;
     let min_read = size.min((buffer.bytes.len() - read_ptr) as u32);
     let bytes = buffer
+        .lock()
+        .or_trap("lunatic::buffer::read::write_memory")?
         .bytes
         .get(read_ptr..(read_ptr + min_read as usize))
         .or_trap("lunatic::buffer::read::write_memory")?;
@@ -69,4 +73,16 @@ fn read_data<T: BufferCtx>(mut caller: Caller<T>, id: u64, ptr: u32, size: u32) 
         .write(&mut caller, ptr as usize, bytes)
         .or_trap("lunatic::buffer::read::write_memory")?;
     Ok(min_read)
+}
+
+fn seek_data<T: BufferCtx>(mut caller: Caller<T>, id: u64, index: u32) -> Result<()> {
+  let mut buffer = &mut caller
+    .data_mut()
+    .buffer_resources_mut()
+    .get(id)
+    .or_trap("lunatic::buffer::seek_data::get_buffer")?
+    .clone();
+
+  buffer.seek(index as usize);
+  Ok(())
 }
