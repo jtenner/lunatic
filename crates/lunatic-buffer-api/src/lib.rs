@@ -21,7 +21,7 @@ pub struct Buffer {
     pub read_ptr: Mutex<Option<usize>>,
 }
 
-pub type BufferResource = HashMapId<Arc<Box<Buffer>>>;
+pub type BufferResource = HashMapId<Arc<Buffer>>;
 
 pub trait BufferCtx {
     fn buffer_resources(&self) -> &BufferResource;
@@ -62,14 +62,12 @@ fn read_data<T: BufferCtx>(mut caller: Caller<T>, id: u64, ptr: u32, size: u32) 
 
     let min_read = size.min((buffer.bytes.len() - read_ptr) as u32);
 
-    let bytes = {
-        buffer
-            .bytes
-            .get(read_ptr..(read_ptr + min_read as usize))
-            .or_trap("lunatic::buffer::read::write_memory")?
-            .to_owned()
-            .clone()
-    };
+    let bytes = buffer
+        .bytes
+        .get(read_ptr..(read_ptr + min_read as usize))
+        .or_trap("lunatic::buffer::read::write_memory")?
+        .to_owned()
+        .clone();
 
     let slice = bytes.as_slice();
 
